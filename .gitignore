@@ -1,2 +1,8 @@
+# builds
 /target
+# secrets
 .env
+# certs
+*.pem
+*.crt
+*.csr
