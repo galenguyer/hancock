@@ -86,21 +86,19 @@ fn issue(args: Issue) {
     };
 
     let x509_req_path = path::cert_csr(&base_dir, &args.common_name, key_type);
-    let x509_req = match Path::new(&x509_req_path).exists() {
-        true => req::read_req(&x509_req_path),
-        false => {
-            let req = req::generate_req(
-                &Some(args.common_name.clone()),
-                &args.country,
-                &args.state,
-                &args.locality,
-                &args.organization,
-                &args.organizational_unit,
-                &pkey,
-            );
-            req::save_req(&x509_req_path, &req);
-            req
-        }
+    let x509_req = {
+        let req = req::generate_req(
+            &Some(args.common_name.clone()),
+            &args.country,
+            &args.state,
+            &args.locality,
+            &args.organization,
+            &args.organizational_unit,
+            &args.subject_alt_names,
+            &pkey,
+        );
+        req::save_req(&x509_req_path, &req);
+        req
     };
 
     let cert = cert::generate_cert(args.lifetime, &x509_req, &ca_cert, &ca_pkey);

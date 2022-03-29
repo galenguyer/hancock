@@ -104,6 +104,10 @@ pub struct Issue {
     #[clap(long, short = 'u')]
     pub organizational_unit: Option<String>,
 
+    /// Subject Alternative Names
+    #[clap(long)]
+    pub subject_alt_names: Option<String>,
+
     /// Password for private key
     #[clap(long, short = 'p', env = "CA_PASSWORD")]
     pub password: Option<String>,

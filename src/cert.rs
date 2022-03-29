@@ -8,7 +8,6 @@ use openssl::x509::*;
 use crate::path;
 use std::fs::{read, write};
 
-#[allow(clippy::too_many_arguments)]
 pub fn generate_cert(
     lifetime_days: u32,
     signing_request: &X509Req,
@@ -75,6 +74,14 @@ pub fn generate_cert(
     x509_builder
         .append_extension(authority_key_identifier)
         .unwrap();
+
+    // TODO: It'd be cool if this ignored anything but SANs
+    // but I'm not sure if that's possible
+    if !signing_request.extensions().unwrap().is_empty() {
+        for extension in signing_request.extensions().unwrap() {
+            x509_builder.append_extension(extension).unwrap();
+        }
+    }
 
     let digest_algorithm = match signing_request.public_key().unwrap().id() {
         Id::RSA => MessageDigest::sha256(),

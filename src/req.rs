@@ -1,12 +1,17 @@
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
 use openssl::pkey::{Id, PKey, Private};
+use openssl::stack::Stack;
+use openssl::x509::extension::SubjectAlternativeName;
 use openssl::x509::{X509Name, X509Req};
 
 use std::fs::{read, write};
+use std::net::IpAddr;
+use std::str::FromStr;
 
 use crate::path;
 
+#[allow(clippy::too_many_arguments)]
 pub fn generate_req(
     common_name: &Option<String>,
     country: &Option<String>,
@@ -14,6 +19,7 @@ pub fn generate_req(
     locality: &Option<String>,
     organization: &Option<String>,
     organizational_unit: &Option<String>,
+    subject_alternative_names: &Option<String>,
     pkey: &PKey<Private>,
 ) -> X509Req {
     let mut x509req_builder = X509Req::builder().unwrap();
@@ -54,6 +60,25 @@ pub fn generate_req(
     }
     let x509_name = x509_name_builder.build();
     x509req_builder.set_subject_name(&x509_name).unwrap();
+
+    let mut subject_alt_name = SubjectAlternativeName::new();
+
+    if let Some(san) = subject_alternative_names {
+        let alt_names = san.split(',');
+        for name in alt_names {
+            if IpAddr::from_str(name).is_ok() {
+                subject_alt_name.ip(name);
+            } else {
+                subject_alt_name.dns(name);
+            }
+        }
+    }
+    let subject_alt_name = subject_alt_name
+        .build(&x509req_builder.x509v3_context(None))
+        .unwrap();
+    let mut stack = Stack::new().unwrap();
+    stack.push(subject_alt_name).unwrap();
+    x509req_builder.add_extensions(&stack).unwrap();
 
     let digest_algorithm = match pkey.id() {
         Id::RSA => MessageDigest::sha256(),
