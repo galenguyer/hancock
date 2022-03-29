@@ -6,9 +6,6 @@ use openssl::pkey::{Id, PKey, Private};
 use openssl::x509::extension::*;
 use openssl::x509::*;
 
-use crate::path;
-use std::fs::write;
-
 #[allow(clippy::too_many_arguments)]
 pub fn generate_root_cert(
     lifetime_days: u32,
@@ -101,10 +98,4 @@ pub fn generate_root_cert(
     x509_builder.sign(pkey, digest_algorithm).unwrap();
 
     x509_builder.build()
-}
-
-pub fn save_root_cert(path: &str, cert: &X509) {
-    println!("{}", path);
-    path::ensure_dir(path);
-    write(path, cert.to_pem().unwrap()).unwrap();
 }

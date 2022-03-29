@@ -1,5 +1,7 @@
+pub mod cert;
 pub mod path;
 pub mod pkey;
+pub mod req;
 pub mod root;
 
 #[derive(Clone, Copy)]
