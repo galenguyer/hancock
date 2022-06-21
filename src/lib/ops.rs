@@ -255,10 +255,24 @@ fn cert_info(crt: openssl::x509::X509) -> String {
     let cn = get_cn(&crt);
     let ex = match now.compare(crt.not_after()).unwrap() {
         Ordering::Greater => {
-            format!("{} days ago", now.diff(crt.not_after()).unwrap().days)
+            match now.diff(crt.not_after()).unwrap().days {
+                1 => {
+                    String::from("1 day ago")
+                }
+                d @ _ => {
+                    format!("{} days ago", d)
+                }
+            }
         }
         Ordering::Less => {
-            format!("in {} days", now.diff(crt.not_after()).unwrap().days)
+            match now.diff(crt.not_after()).unwrap().days {
+                1 => {
+                    String::from("in 1 day")
+                }
+                d @ _ => {
+                    format!("in {} days", d)
+                }
+            }
         }
         Ordering::Equal => String::from("right now"),
     };
