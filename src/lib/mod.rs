@@ -1,9 +1,9 @@
 pub mod cert;
+pub mod ops;
 pub mod path;
 pub mod pkey;
 pub mod req;
 pub mod root;
-pub mod ops;
 
 #[derive(Clone, Copy)]
 pub enum KeyType {

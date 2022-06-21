@@ -73,6 +73,14 @@ pub fn generate_req(
             }
         }
     }
+
+    if let Some(cn) = common_name {
+        if IpAddr::from_str(cn).is_ok() {
+            subject_alt_name.ip(cn);
+        } else {
+            subject_alt_name.dns(cn);
+        }
+    }
     let subject_alt_name = subject_alt_name
         .build(&x509req_builder.x509v3_context(None))
         .unwrap();
