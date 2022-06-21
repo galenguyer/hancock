@@ -5,21 +5,52 @@ use std::fs::create_dir_all;
 use std::path::Path;
 
 pub fn ca_pkey(base_dir: &str, key_type: KeyType) -> String {
-    format!("{base_dir}/authority.{}.pem", key_type.to_string())
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/authority.pem")
+        }
+        _ => {
+            format!("{base_dir}/authority.{}.pem", key_type.to_string())
+        }
+    }
 }
 pub fn ca_crt(base_dir: &str, key_type: KeyType) -> String {
-    format!("{base_dir}/authority.{}.crt", key_type.to_string())
+    match key_type {
+        KeyType::Rsa(_) => format!("{base_dir}/authority.crt"),
+        _ => {
+            format!("{base_dir}/authority.{}.crt", key_type.to_string())
+        }
+    }
 }
 
 pub fn cert_pkey(base_dir: &str, name: &str, key_type: KeyType) -> String {
-    format!("{base_dir}/{name}/{name}.{}.pem", key_type.to_string())
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/{name}/{name}.pem")
+        }
+        _ => {
+            format!("{base_dir}/{name}/{name}.{}.pem", key_type.to_string())
+        }
+    }
 }
 pub fn cert_csr(base_dir: &str, name: &str, key_type: KeyType) -> String {
-    format!("{base_dir}/{name}/{name}.{}.csr", key_type.to_string())
-}
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/{name}/{name}.csr")
+        }
+        _ => {
+            format!("{base_dir}/{name}/{name}.{}.csr", key_type.to_string())
+        }
+    }}
 pub fn cert_crt(base_dir: &str, name: &str, key_type: KeyType) -> String {
-    format!("{base_dir}/{name}/{name}.{}.crt", key_type.to_string())
-}
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/{name}/{name}.crt")
+        }
+        _ => {
+            format!("{base_dir}/{name}/{name}.{}.crt", key_type.to_string())
+        }
+    }}
 
 pub fn base_dir(raw_base: &str) -> String {
     Path::new(&shellexpand::tilde(&raw_base).to_string())
