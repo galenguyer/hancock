@@ -1,4 +1,8 @@
 use clap::Args;
+use openssl::asn1::Asn1Time;
+use openssl::nid::Nid;
+use std::cmp::Ordering;
+use std::fs;
 use std::path::Path;
 
 use crate::KeyType;
@@ -104,6 +108,13 @@ pub struct Issue {
     pub password: Option<String>,
 }
 
+#[derive(Args, Debug)]
+#[clap(about = "List all known certificates")]
+pub struct List {
+    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    pub base_dir: String,
+}
+
 pub fn init(args: Init) {
     let base_dir = path::base_dir(&args.base_dir);
 
@@ -194,6 +205,64 @@ pub fn issue(args: Issue) {
         &path::cert_crt(&base_dir, &args.common_name, key_type),
         &cert,
     );
+}
+
+pub fn list(args: List) {
+    let base_dir = path::base_dir(&args.base_dir);
+
+    let rsa_ca_crt_path = path::ca_crt(&base_dir, KeyType::Rsa(0));
+    if Path::new(&rsa_ca_crt_path).is_file() {
+        let crt = cert::read_cert(&rsa_ca_crt_path);
+        println!("{}", cert_info(crt));
+    }
+
+    let ecda_ca_crt_path = path::ca_crt(&base_dir, KeyType::Ecdsa);
+    if Path::new(&ecda_ca_crt_path).is_file() {
+        let crt = cert::read_cert(&ecda_ca_crt_path);
+        println!("{}", cert_info(crt));
+    }
+
+    for name in fs::read_dir(&base_dir).unwrap() {
+        let name = name.unwrap();
+        if name.file_type().unwrap().is_dir() {
+            let name = format!("{}", name.file_name().to_string_lossy());
+            let rsa_crt_path = path::cert_crt(&base_dir, &name, KeyType::Rsa(0));
+            if Path::new(&rsa_crt_path).is_file() {
+                let crt = cert::read_cert(&rsa_crt_path);
+                println!("{}", cert_info(crt));
+            }
+        
+            let ecda_crt_path = path::cert_crt(&base_dir, &name, KeyType::Ecdsa);
+            if Path::new(&ecda_crt_path).is_file() {
+                let crt = cert::read_cert(&ecda_crt_path);
+                println!("{}", cert_info(crt));
+            }        
+        }
+    }
+}
+
+fn cert_info(crt: openssl::x509::X509) -> String {
+    let now = Asn1Time::days_from_now(0).unwrap();
+
+    let get_cn = |cert: &openssl::x509::X509| -> String {
+        let cn = cert.subject_name().entries_by_nid(Nid::COMMONNAME);
+        for entry in cn {
+            return format!("{}", entry.data().as_utf8().unwrap());
+        }
+        String::from("Unknown CN")
+    };
+
+    let cn = get_cn(&crt);
+    let ex = match now.compare(crt.not_after()).unwrap() {
+        Ordering::Greater => {
+            format!("{} days ago", now.diff(crt.not_after()).unwrap().days)
+        }
+        Ordering::Less => {
+            format!("in {} days", now.diff(crt.not_after()).unwrap().days)
+        }
+        Ordering::Equal => String::from("right now"),
+    };
+    format!("{cn} - expires {ex}")
 }
 
 fn validate_key_type(input: &str) -> Result<(), String> {

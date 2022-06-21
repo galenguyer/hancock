@@ -14,6 +14,7 @@ pub struct Cli {
 pub enum Commands {
     Init(Init),
     Issue(Issue),
+    List(List),
 }
 
 fn main() {
@@ -22,5 +23,6 @@ fn main() {
     match cli.command {
         Commands::Init(args) => init(args),
         Commands::Issue(args) => issue(args),
+        Commands::List(args) => list(args),
     }
 }
