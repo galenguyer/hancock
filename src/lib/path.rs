@@ -41,7 +41,8 @@ pub fn cert_csr(base_dir: &str, name: &str, key_type: KeyType) -> String {
         _ => {
             format!("{base_dir}/{name}/{name}.{}.csr", key_type.to_string())
         }
-    }}
+    }
+}
 pub fn cert_crt(base_dir: &str, name: &str, key_type: KeyType) -> String {
     match key_type {
         KeyType::Rsa(_) => {
@@ -50,7 +51,8 @@ pub fn cert_crt(base_dir: &str, name: &str, key_type: KeyType) -> String {
         _ => {
             format!("{base_dir}/{name}/{name}.{}.crt", key_type.to_string())
         }
-    }}
+    }
+}
 
 pub fn base_dir(raw_base: &str) -> String {
     Path::new(&shellexpand::tilde(&raw_base).to_string())
