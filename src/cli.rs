@@ -1,3 +1,4 @@
+use std::path::Path;
 use clap::{Parser, Subcommand};
 
 use hancock::ops::*;
@@ -18,6 +19,23 @@ pub enum Commands {
 }
 
 fn main() {
+    let env_file = match Path::new(".env").exists() {
+        true => Some(String::from(".env")),
+        false => {
+            match Path::new(&dirs::home_dir().unwrap()).join(".hancock").exists() {
+                true => Some(Path::new(&dirs::home_dir().unwrap()).join(".hancock").to_str().unwrap().to_owned()),
+                false => None
+            }
+        }
+    };
+
+    if let Some(file) = env_file {
+        dotenvy::from_path(Path::new(&file)).ok();
+    }
+
+    #[cfg(not(debug_assertions))]
+    let cli = Cli::parse();
+    #[cfg(debug_assertions)]
     let cli = dbg!(Cli::parse());
 
     match cli.command {
