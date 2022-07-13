@@ -253,6 +253,7 @@ fn cert_info(crt: openssl::x509::X509) -> String {
     };
 
     let cn = get_cn(&crt);
+    let orig = crt.not_before().diff(crt.not_after()).unwrap().days;
     let ex = match now.compare(crt.not_after()).unwrap() {
         Ordering::Greater => {
             match now.diff(crt.not_after()).unwrap().days {
@@ -276,7 +277,7 @@ fn cert_info(crt: openssl::x509::X509) -> String {
         }
         Ordering::Equal => String::from("right now"),
     };
-    format!("{cn} - expires {ex}")
+    format!("{cn} - expires {ex} (originally {orig} days)")
 }
 
 fn validate_key_type(input: &str) -> Result<(), String> {
