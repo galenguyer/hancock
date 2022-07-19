@@ -1,5 +1,5 @@
-use std::path::Path;
 use clap::{Parser, Subcommand};
+use std::path::Path;
 
 use hancock::ops::*;
 
@@ -16,15 +16,25 @@ pub enum Commands {
     Init(Init),
     Issue(Issue),
     List(List),
+    Renew(Renew),
 }
 
 fn main() {
     let env_file = match Path::new(".env").exists() {
         true => Some(String::from(".env")),
         false => {
-            match Path::new(&dirs::home_dir().unwrap()).join(".hancock.conf").exists() {
-                true => Some(Path::new(&dirs::home_dir().unwrap()).join(".hancock.conf").to_str().unwrap().to_owned()),
-                false => None
+            match Path::new(&dirs::home_dir().unwrap())
+                .join(".hancock.conf")
+                .exists()
+            {
+                true => Some(
+                    Path::new(&dirs::home_dir().unwrap())
+                        .join(".hancock.conf")
+                        .to_str()
+                        .unwrap()
+                        .to_owned(),
+                ),
+                false => None,
             }
         }
     };
@@ -42,5 +52,6 @@ fn main() {
         Commands::Init(args) => init(args),
         Commands::Issue(args) => issue(args),
         Commands::List(args) => list(args),
+        Commands::Renew(args) => renew(args),
     }
 }

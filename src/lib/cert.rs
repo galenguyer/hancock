@@ -95,7 +95,6 @@ pub fn generate_cert(
 }
 
 pub fn save_cert(path: &str, cert: &X509) {
-    println!("{}", path);
     path::ensure_dir(path);
     write(path, cert.to_pem().unwrap()).unwrap();
 }

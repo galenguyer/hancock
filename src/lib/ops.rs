@@ -115,6 +115,22 @@ pub struct List {
     pub base_dir: String,
 }
 
+#[derive(Args, Debug)]
+#[clap(about = "Renew a certificate or all if no Common Name is specified")]
+pub struct Renew {
+    /// Base directory to store certificates
+    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    pub base_dir: String,
+
+    /// Certificate CommonName
+    #[clap(long, short = 'n')]
+    pub common_name: Option<String>,
+
+    /// Password for private key
+    #[clap(long, short = 'p', env = "CA_PASSWORD")]
+    pub password: Option<String>,
+}
+
 pub fn init(args: Init) {
     let base_dir = path::base_dir(&args.base_dir);
 
@@ -226,17 +242,82 @@ pub fn list(args: List) {
         let name = name.unwrap();
         if name.file_type().unwrap().is_dir() {
             let name = format!("{}", name.file_name().to_string_lossy());
-            let rsa_crt_path = path::cert_crt(&base_dir, &name, KeyType::Rsa(0));
-            if Path::new(&rsa_crt_path).is_file() {
-                let crt = cert::read_cert(&rsa_crt_path);
-                println!("{}", cert_info(crt));
+            for key_type in [KeyType::Rsa(0), KeyType::Ecdsa] {
+                let crt_path = path::cert_crt(&base_dir, &name, key_type);
+                if Path::new(&crt_path).is_file() {
+                    let crt = cert::read_cert(&crt_path);
+                    println!("{}", cert_info(crt));
+                }
             }
-        
-            let ecda_crt_path = path::cert_crt(&base_dir, &name, KeyType::Ecdsa);
-            if Path::new(&ecda_crt_path).is_file() {
-                let crt = cert::read_cert(&ecda_crt_path);
-                println!("{}", cert_info(crt));
-            }        
+        }
+    }
+}
+
+pub fn renew(args: Renew) {
+    let base_dir = path::base_dir(&args.base_dir);
+
+    let rsa_ca_crt_path = path::ca_crt(&base_dir, KeyType::Rsa(0));
+    if Path::new(&rsa_ca_crt_path).is_file() {
+        let crt = cert::read_cert(&rsa_ca_crt_path);
+        println!("{}", cert_info(crt));
+    }
+
+    let ecda_ca_crt_path = path::ca_crt(&base_dir, KeyType::Ecdsa);
+    if Path::new(&ecda_ca_crt_path).is_file() {
+        let crt = cert::read_cert(&ecda_ca_crt_path);
+        println!("{}", cert_info(crt));
+    }
+
+    for name in fs::read_dir(&base_dir).unwrap() {
+        let name = name.unwrap();
+        if name.file_type().unwrap().is_dir() {
+            let name = format!("{}", name.file_name().to_string_lossy());
+            for key_type in [KeyType::Rsa(0), KeyType::Ecdsa] {
+                let crt_path = path::cert_crt(&base_dir, &name, key_type);
+                if Path::new(&crt_path).is_file() {
+                    let crt = cert::read_cert(&crt_path);
+                    let now = Asn1Time::days_from_now(0).unwrap();
+                    let original_lifetime = crt.not_before().diff(crt.not_after()).unwrap().days;
+
+                    if now.diff(crt.not_after()).unwrap().days < 30 {
+                        // TODO: handle expirations in the past
+                        println!(
+                            "{} expires in {} days, renewing for {} days",
+                            get_cn(&crt).unwrap_or_else(|| String::from("Unknown CN")),
+                            now.diff(crt.not_after()).unwrap().days,
+                            original_lifetime
+                        );
+
+                        let ca_pkey_path = path::ca_pkey(&base_dir, key_type);
+
+                        let ca_pkey = match Path::new(&ca_pkey_path).exists() {
+                            true => pkey::read_pkey(&ca_pkey_path, args.password.clone()),
+                            false => {
+                                panic!("No private key for type {} found", key_type.to_string());
+                            }
+                        };
+
+                        let ca_cert_path = path::ca_crt(&base_dir, key_type);
+                        let ca_cert = cert::read_cert(&ca_cert_path);
+
+                        let x509_req = req::read_req(&path::cert_csr(
+                            &base_dir,
+                            &get_cn(&crt).unwrap(),
+                            key_type,
+                        ));
+                        let cert = cert::generate_cert(
+                            original_lifetime as u32,
+                            &x509_req,
+                            &ca_cert,
+                            &ca_pkey,
+                        );
+                        cert::save_cert(
+                            &path::cert_crt(&base_dir, &get_cn(&crt).unwrap(), key_type),
+                            &cert,
+                        );
+                    }
+                }
+            }
         }
     }
 }
@@ -244,37 +325,21 @@ pub fn list(args: List) {
 fn cert_info(crt: openssl::x509::X509) -> String {
     let now = Asn1Time::days_from_now(0).unwrap();
 
-    let get_cn = |cert: &openssl::x509::X509| -> String {
-        let cn = cert.subject_name().entries_by_nid(Nid::COMMONNAME);
-        for entry in cn {
-            return format!("{}", entry.data().as_utf8().unwrap());
-        }
-        String::from("Unknown CN")
-    };
-
-    let cn = get_cn(&crt);
+    let cn = get_cn(&crt).unwrap_or_else(|| String::from("Unknown CN"));
     let orig = crt.not_before().diff(crt.not_after()).unwrap().days;
     let ex = match now.compare(crt.not_after()).unwrap() {
-        Ordering::Greater => {
-            match now.diff(crt.not_after()).unwrap().days {
-                1 => {
-                    String::from("1 day ago")
-                }
-                d @ _ => {
-                    format!("{} days ago", d)
-                }
+        Ordering::Greater => match now.diff(crt.not_after()).unwrap().days {
+            1 => String::from("1 day ago"),
+            d => {
+                format!("{} days ago", d)
             }
-        }
-        Ordering::Less => {
-            match now.diff(crt.not_after()).unwrap().days {
-                1 => {
-                    String::from("in 1 day")
-                }
-                d @ _ => {
-                    format!("in {} days", d)
-                }
+        },
+        Ordering::Less => match now.diff(crt.not_after()).unwrap().days {
+            1 => String::from("in 1 day"),
+            d => {
+                format!("in {} days", d)
             }
-        }
+        },
         Ordering::Equal => String::from("right now"),
     };
     format!("{cn} - expires {ex} (originally {orig} days)")
@@ -290,4 +355,12 @@ fn validate_key_type(input: &str) -> Result<(), String> {
             input
         ))
     }
+}
+
+fn get_cn(crt: &openssl::x509::X509) -> Option<String> {
+    let mut cn = crt.subject_name().entries_by_nid(Nid::COMMONNAME);
+    if let Some(entry) = cn.next() {
+        return Some(format!("{}", entry.data().as_utf8().unwrap()));
+    }
+    None
 }
