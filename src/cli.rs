@@ -22,8 +22,8 @@ fn main() {
     let env_file = match Path::new(".env").exists() {
         true => Some(String::from(".env")),
         false => {
-            match Path::new(&dirs::home_dir().unwrap()).join(".hancock").exists() {
-                true => Some(Path::new(&dirs::home_dir().unwrap()).join(".hancock").to_str().unwrap().to_owned()),
+            match Path::new(&dirs::home_dir().unwrap()).join(".hancock.conf").exists() {
+                true => Some(Path::new(&dirs::home_dir().unwrap()).join(".hancock.conf").to_str().unwrap().to_owned()),
                 false => None
             }
         }
