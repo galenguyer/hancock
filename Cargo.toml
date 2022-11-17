@@ -1,7 +1,7 @@
 [package]
 name = "hancock"
 authors = ["Galen Guyer <galen@galenguyer.com>"]
-version = "1.5.0"
+version = "1.5.1"
 edition = "2021"
 license = "MIT"
 
@@ -16,9 +16,9 @@ path = "src/cli.rs"
 
 [dependencies]
 caps = "0.5.5"
-clap = { version = "3.1.6", features = ["cargo", "derive", "env", "wrap_help"] }
+clap = { version = "4.0.26", features = ["cargo", "derive", "env", "wrap_help"] }
 dirs = "4.0.0"
-dotenvy = "0.15.1"
-openssl = "0.10.38"
-path-absolutize = "3.0.12"
-shellexpand = "2.1.0"
+dotenvy = "0.15.6"
+openssl = "0.10.42"
+path-absolutize = "3.0.14"
+shellexpand = "2.1.2"

@@ -5,7 +5,7 @@ pub mod pkey;
 pub mod req;
 pub mod root;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum KeyType {
     Ecdsa,
     Rsa(u32),

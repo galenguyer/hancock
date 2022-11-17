@@ -9,125 +9,125 @@ use crate::KeyType;
 use crate::*;
 
 #[derive(Args, Debug)]
-#[clap(about = "Generate a new root certificate")]
+#[command(about = "Generate a new root certificate")]
 pub struct Init {
     /// Base directory to store certificates
-    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    #[arg(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
     pub base_dir: String,
 
     /// Algorithm to generate private keys ('RSA' or 'ECDSA')
-    #[clap(long, short = 't', default_value = "RSA", validator = validate_key_type)]
+    #[arg(long, short = 't', default_value = "RSA", value_parser = type_parser)]
     pub key_type: String,
 
     /// Length to use when generating an RSA key. Ignored for ECDSA
-    #[clap(long, short = 'b', default_value_t = 4096)]
+    #[arg(long, short = 'b', default_value_t = 4096)]
     pub key_length: u32,
 
     /// Lifetime in days of the generated certificate
-    #[clap(long, short = 'd', default_value_t = 365 * 10)]
+    #[arg(long, short = 'd', default_value_t = 365 * 10)]
     pub lifetime: u32,
 
     /// Certificate CommonName
-    #[clap(long, short = 'n')]
+    #[arg(long, short = 'n')]
     pub common_name: Option<String>,
 
     /// Certificate Country
-    #[clap(long, short = 'c')]
+    #[arg(long, short = 'c')]
     pub country: Option<String>,
 
     /// Certificate State or Province
-    #[clap(long, short = 's')]
+    #[arg(long, short = 's')]
     pub state: Option<String>,
 
     /// Certificate Locality
-    #[clap(long, short = 'l')]
+    #[arg(long, short = 'l')]
     pub locality: Option<String>,
 
     /// Certificate Organization
-    #[clap(long, short = 'o')]
+    #[arg(long, short = 'o')]
     pub organization: Option<String>,
 
     /// Certificate Organizational Unit
-    #[clap(long, short = 'u')]
+    #[arg(long, short = 'u')]
     pub organizational_unit: Option<String>,
 
     /// Password for private key
-    #[clap(long, short = 'p', env = "CA_PASSWORD")]
+    #[arg(long, short = 'p', env = "CA_PASSWORD")]
     pub password: Option<String>,
 }
 
 #[derive(Args, Debug)]
-#[clap(about = "Issue a new certificate")]
+#[command(about = "Issue a new certificate")]
 pub struct Issue {
     /// Base directory to store certificates
-    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    #[arg(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
     pub base_dir: String,
 
     /// Algorithm to generate private keys ('RSA' or 'ECDSA')
-    #[clap(long, short = 't', default_value = "RSA", validator = validate_key_type)]
+    #[arg(long, short = 't', default_value = "RSA")]
     pub key_type: String,
 
     /// Length to use when generating an RSA key. Ignored for ECDSA
-    #[clap(long, short = 'b', default_value_t = 2048)]
+    #[arg(long, short = 'b', default_value_t = 2048)]
     pub key_length: u32,
 
     /// Lifetime in days of the generated certificate
-    #[clap(long, short = 'd', default_value_t = 90)]
+    #[arg(long, short = 'd', default_value_t = 90)]
     pub lifetime: u32,
 
     /// Certificate CommonName
-    #[clap(long, short = 'n')]
+    #[arg(long, short = 'n')]
     pub common_name: String,
 
     /// Certificate Country
-    #[clap(long, short = 'c')]
+    #[arg(long, short = 'c')]
     pub country: Option<String>,
 
     /// Certificate State or Province
-    #[clap(long, short = 's')]
+    #[arg(long, short = 's')]
     pub state: Option<String>,
 
     /// Certificate Locality
-    #[clap(long, short = 'l')]
+    #[arg(long, short = 'l')]
     pub locality: Option<String>,
 
     /// Certificate Organization
-    #[clap(long, short = 'o')]
+    #[arg(long, short = 'o')]
     pub organization: Option<String>,
 
     /// Certificate Organizational Unit
-    #[clap(long, short = 'u')]
+    #[arg(long, short = 'u')]
     pub organizational_unit: Option<String>,
 
     /// Subject Alternative Names
-    #[clap(long)]
+    #[arg(long)]
     pub subject_alt_names: Option<String>,
 
     /// Password for private key
-    #[clap(long, short = 'p', env = "CA_PASSWORD")]
+    #[arg(long, short = 'p', env = "CA_PASSWORD")]
     pub password: Option<String>,
 }
 
 #[derive(Args, Debug)]
-#[clap(about = "List all known certificates")]
+#[command(about = "List all known certificates")]
 pub struct List {
-    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    #[arg(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
     pub base_dir: String,
 }
 
 #[derive(Args, Debug)]
-#[clap(about = "Renew a certificate or all if no Common Name is specified")]
+#[command(about = "Renew a certificate or all if no Common Name is specified")]
 pub struct Renew {
     /// Base directory to store certificates
-    #[clap(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
+    #[arg(long, default_value = "~/.hancock", env = "CA_BASE_DIR")]
     pub base_dir: String,
 
     /// Certificate CommonName
-    #[clap(long, short = 'n')]
+    #[arg(long, short = 'n')]
     pub common_name: Option<String>,
 
     /// Password for private key
-    #[clap(long, short = 'p', env = "CA_PASSWORD")]
+    #[arg(long, short = 'p', env = "CA_PASSWORD")]
     pub password: Option<String>,
 }
 
@@ -345,13 +345,13 @@ fn cert_info(crt: openssl::x509::X509) -> String {
     format!("{cn} - expires {ex} (originally {orig} days)")
 }
 
-fn validate_key_type(input: &str) -> Result<(), String> {
+fn type_parser(input: &str) -> Result<String, String> {
     let input = input.to_string().to_uppercase();
     if input == "RSA" || input == "ECDSA" {
-        Ok(())
+        Ok(input)
     } else {
         Err(format!(
-            "{} is not a valid key type ['rsa', 'ecdsa']",
+            "{} is not a valid key type ['RSA', 'ECDSA']",
             input
         ))
     }

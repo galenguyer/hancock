@@ -4,8 +4,8 @@ use std::path::Path;
 use hancock::ops::*;
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-#[clap(propagate_version = true)]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
