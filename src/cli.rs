@@ -20,6 +20,7 @@ pub enum Commands {
 }
 
 fn main() {
+    caps::clear(None, caps::CapSet::Permitted).expect("Unable to clear capabilities");
     let env_file = match Path::new(".env").exists() {
         true => Some(String::from(".env")),
         false => {
