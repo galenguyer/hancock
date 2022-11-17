@@ -78,17 +78,20 @@ pub fn generate_req(
     if let Some(cn) = common_name {
         if IpAddr::from_str(cn).is_ok() {
             subject_alt_name.ip(cn);
-        } else {
+        } else if cn.contains('@') {
+            subject_alt_name.email(cn);
+        } else if cn.contains('.') {
             subject_alt_name.dns(cn);
         }
     }
-    let subject_alt_name = subject_alt_name
-        .build(&x509req_builder.x509v3_context(None))
-        .unwrap();
-    let mut stack = Stack::new().unwrap();
-    stack.push(subject_alt_name).unwrap();
-    x509req_builder.add_extensions(&stack).unwrap();
-
+    match subject_alt_name.build(&x509req_builder.x509v3_context(None)) {
+        Ok(subject_alt_name) => {
+            let mut stack = Stack::new().unwrap();
+            stack.push(subject_alt_name).unwrap();
+            x509req_builder.add_extensions(&stack).unwrap();
+        }
+        Err(_) => {}
+    }
     let digest_algorithm = match pkey.id() {
         Id::RSA => MessageDigest::sha256(),
         Id::EC => MessageDigest::sha384(),
