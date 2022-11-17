@@ -2,6 +2,7 @@ use crate::KeyType;
 use path_absolutize::*;
 use shellexpand;
 use std::fs::create_dir_all;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 pub fn ca_pkey(base_dir: &str, key_type: KeyType) -> String {
@@ -74,4 +75,7 @@ pub fn ensure_dir(path: &str) {
     };
 
     create_dir_all(dir).unwrap();
+    let mut permissions = std::fs::metadata(dir).unwrap().permissions();
+    permissions.set_mode(0o700);
+    std::fs::set_permissions(dir, permissions).unwrap();
 }

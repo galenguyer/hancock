@@ -6,7 +6,8 @@ use openssl::x509::extension::*;
 use openssl::x509::*;
 
 use crate::path;
-use std::fs::{read, write};
+use std::fs::{read, write, File};
+use std::os::unix::prelude::PermissionsExt;
 
 pub fn generate_cert(
     lifetime_days: u32,
@@ -96,6 +97,10 @@ pub fn generate_cert(
 
 pub fn save_cert(path: &str, cert: &X509) {
     path::ensure_dir(path);
+    let file = File::create(path).unwrap();
+    let mut permissions = file.metadata().unwrap().permissions();
+    permissions.set_mode(0o600);
+    std::fs::set_permissions(path, permissions).unwrap();
     write(path, cert.to_pem().unwrap()).unwrap();
 }
 

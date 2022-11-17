@@ -5,7 +5,8 @@ use openssl::nid::Nid;
 use openssl::pkey::{PKey, Private};
 use openssl::rsa::Rsa;
 use openssl::symm::Cipher;
-use std::fs::{read, write};
+use std::fs::{read, write, File};
+use std::os::unix::fs::PermissionsExt;
 
 pub fn generate_pkey(key_type: KeyType) -> PKey<Private> {
     match key_type {
@@ -31,6 +32,10 @@ pub fn save_pkey(path: &str, key: &PKey<Private>, password: Option<String>) {
         }
         None => key.private_key_to_pem_pkcs8().unwrap(),
     };
+    let file = File::create(path).unwrap();
+    let mut permissions = file.metadata().unwrap().permissions();
+    permissions.set_mode(0o600);
+    std::fs::set_permissions(path, permissions).unwrap();
     write(path, pem_encoded).unwrap();
 }
 

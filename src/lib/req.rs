@@ -5,8 +5,9 @@ use openssl::stack::Stack;
 use openssl::x509::extension::SubjectAlternativeName;
 use openssl::x509::{X509Name, X509Req};
 
-use std::fs::{read, write};
+use std::fs::{read, write, File};
 use std::net::IpAddr;
+use std::os::unix::fs::PermissionsExt;
 use std::str::FromStr;
 
 use crate::path;
@@ -102,6 +103,10 @@ pub fn generate_req(
 pub fn save_req(path: &str, req: &X509Req) {
     println!("{}", path);
     path::ensure_dir(path);
+    let file = File::create(path).unwrap();
+    let mut permissions = file.metadata().unwrap().permissions();
+    permissions.set_mode(0o600);
+    std::fs::set_permissions(path, permissions).unwrap();
     write(path, req.to_pem().unwrap()).unwrap();
 }
 
