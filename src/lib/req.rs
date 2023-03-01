@@ -80,7 +80,7 @@ pub fn generate_req(
             subject_alt_name.ip(cn);
         } else if cn.contains('@') {
             subject_alt_name.email(cn);
-        } else if cn.contains('.') {
+        } else {
             subject_alt_name.dns(cn);
         }
     }

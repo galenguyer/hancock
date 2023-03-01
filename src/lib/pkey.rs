@@ -25,7 +25,7 @@ pub fn save_pkey(path: &str, key: &PKey<Private>, password: Option<String>) {
     let pem_encoded = match password {
         Some(pass) => {
             // AES-256-GCM is recommended by this StackOverflow answer, but not supported in
-            // this function. AES-256-CBC is the alternative reccomendation, is supported
+            // this function. AES-256-CBC is the alternative reccomendation and is supported
             // https://stackoverflow.com/a/22958889
             key.private_key_to_pem_pkcs8_passphrase(Cipher::aes_256_cbc(), pass.as_bytes())
                 .unwrap()
