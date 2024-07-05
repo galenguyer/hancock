@@ -71,13 +71,17 @@ pub struct Issue {
     #[arg(long, short = 'b', default_value_t = 2048)]
     pub key_length: u32,
 
-    /// Lifetime in days of the generated certificate
-    #[arg(long, short = 'd', default_value_t = 90)]
-    pub lifetime: u32,
+    /// Lifetime in days of the generated certificate (default 2 years for intermediates or 90 days for certificates)
+    #[arg(long, short = 'd')]
+    pub lifetime: Option<u32>,
+
+    // Certificate Intermediate to generate or use
+    #[arg(long, short = 'i')]
+    pub intermediate: Option<String>,
 
     /// Certificate CommonName
     #[arg(long, short = 'n')]
-    pub common_name: String,
+    pub common_name: Option<String>,
 
     /// Certificate Country
     #[arg(long, short = 'c')]
@@ -176,7 +180,21 @@ pub fn issue(args: Issue) {
         _ => panic!("key_type not ECDSA or RSA after validation. This should never happen"),
     };
 
-    let ca_pkey_path = path::ca_pkey(&base_dir, key_type);
+    let cn = match args.common_name {
+        Some(ref cn) => cn.clone(),
+        None => match args.intermediate {
+            Some(ref i) => i.clone(),
+            None => panic!("At least one of common-name or intermediate must be set"),
+        },
+    };
+
+    // If both CN and Int are set, use the specified Int CA
+    // If only one is set, use the Root CA
+    let ca_pkey_path = if args.common_name.is_some() && args.intermediate.is_some() {
+        path::intermediate_pkey(&base_dir, &args.intermediate.clone().unwrap(), key_type)
+    } else {
+        path::ca_pkey(&base_dir, key_type)
+    };
 
     let ca_pkey = match Path::new(&ca_pkey_path).exists() {
         true => pkey::read_pkey(&ca_pkey_path, args.password),
@@ -187,10 +205,25 @@ pub fn issue(args: Issue) {
         }
     };
 
-    let ca_cert_path = path::ca_crt(&base_dir, key_type);
+    // If both CN and Int are set, use the specified Int CA
+    // If only one is set, use the Root CA
+    let ca_cert_path = if args.common_name.is_some() && args.intermediate.is_some() {
+        path::intermediate_crt(&base_dir, &args.intermediate.clone().unwrap(), key_type)
+    } else {
+        path::ca_crt(&base_dir, key_type)
+    };
     let ca_cert = cert::read_cert(&ca_cert_path);
 
-    let pkey_path = path::cert_pkey(&base_dir, &args.common_name, key_type);
+    // If Int is set but CN is not set, generate a new Int PKey
+    // Else If CN is set, generate a new Cert PKey
+    let pkey_path = if args.intermediate.is_some() && args.common_name.is_none() {
+        path::intermediate_pkey(&base_dir, &args.intermediate.clone().unwrap(), key_type)
+    } else if args.common_name.is_some() {
+        path::cert_pkey(&base_dir, &args.common_name.clone().unwrap(), key_type)
+    } else {
+        panic!("unexpected case");
+    };
+
     let pkey = match Path::new(&pkey_path).exists() {
         true => pkey::read_pkey(&pkey_path, None),
         false => {
@@ -200,10 +233,18 @@ pub fn issue(args: Issue) {
         }
     };
 
-    let x509_req_path = path::cert_csr(&base_dir, &args.common_name, key_type);
+    // If Int is set but CN is not set, generate a new Int CSR
+    // Else If CN is set, generate a new Cert CSR
+    let x509_req_path = if args.intermediate.is_some() && args.common_name.is_none() {
+        path::intermediate_csr(&base_dir, &args.intermediate.clone().unwrap(), key_type)
+    } else if args.common_name.is_some() {
+        path::cert_csr(&base_dir, &args.common_name.clone().unwrap(), key_type)
+    } else {
+        panic!("unexpected case");
+    };
     let x509_req = {
         let req = req::generate_req(
-            &Some(args.common_name.clone()),
+            &Some(cn.clone()),
             &args.country,
             &args.state,
             &args.locality,
@@ -216,11 +257,32 @@ pub fn issue(args: Issue) {
         req
     };
 
-    let cert = cert::generate_cert(args.lifetime, &x509_req, false, &ca_cert, &ca_pkey);
-    cert::save_cert(
-        &path::cert_crt(&base_dir, &args.common_name, key_type),
-        &cert,
+    // If Int is set but CN is not set, generate a new Int Cert
+    // Else If CN is set, generate a new Cert
+    let cert_path = if args.intermediate.is_some() && args.common_name.is_none() {
+        path::intermediate_crt(&base_dir, &args.intermediate.clone().unwrap(), key_type)
+    } else if args.common_name.is_some() {
+        path::cert_crt(&base_dir, &args.common_name.clone().unwrap(), key_type)
+    } else {
+        panic!("unexpected case");
+    };
+    let cert = cert::generate_cert(
+        match args.lifetime {
+            Some(d) => d,
+            None => {
+                if args.intermediate.is_some() && args.common_name.is_none() {
+                    365 * 2
+                } else {
+                    90
+                }
+            }
+        },
+        &x509_req,
+        args.intermediate.is_some() && args.common_name.is_none(),
+        &ca_cert,
+        &ca_pkey,
     );
+    cert::save_cert(&cert_path, &cert);
 }
 
 pub fn list(args: List) {

@@ -55,6 +55,46 @@ pub fn cert_crt(base_dir: &str, name: &str, key_type: KeyType) -> String {
     }
 }
 
+pub fn intermediate_pkey(base_dir: &str, name: &str, key_type: KeyType) -> String {
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/intermediates/{name}/{name}.pem")
+        }
+        _ => {
+            format!(
+                "{base_dir}/intermediates/{name}/{name}.{}.pem",
+                key_type.to_string()
+            )
+        }
+    }
+}
+pub fn intermediate_csr(base_dir: &str, name: &str, key_type: KeyType) -> String {
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/intermediates/{name}/{name}.csr")
+        }
+        _ => {
+            format!(
+                "{base_dir}/intermediates/{name}/{name}.{}.csr",
+                key_type.to_string()
+            )
+        }
+    }
+}
+pub fn intermediate_crt(base_dir: &str, name: &str, key_type: KeyType) -> String {
+    match key_type {
+        KeyType::Rsa(_) => {
+            format!("{base_dir}/intermediates/{name}/{name}.crt")
+        }
+        _ => {
+            format!(
+                "{base_dir}/intermediates/{name}/{name}.{}.crt",
+                key_type.to_string()
+            )
+        }
+    }
+}
+
 pub fn base_dir(raw_base: &str) -> String {
     Path::new(&shellexpand::tilde(&raw_base).to_string())
         .absolutize()
