@@ -12,6 +12,7 @@ use std::os::unix::prelude::PermissionsExt;
 pub fn generate_cert(
     lifetime_days: u32,
     signing_request: &X509Req,
+    intermediate: bool,
     ca_cert: &X509,
     ca_key_pair: &PKey<Private>,
 ) -> X509 {
@@ -42,23 +43,36 @@ pub fn generate_cert(
         .set_pubkey(&signing_request.public_key().unwrap())
         .unwrap();
 
-    let basic_constraints = BasicConstraints::new().critical().build().unwrap();
+    let basic_constraints = match intermediate {
+        false => BasicConstraints::new().critical().build().unwrap(),
+        true => BasicConstraints::new().critical().ca().build().unwrap(),
+    };
     x509_builder.append_extension(basic_constraints).unwrap();
 
-    let key_usage = KeyUsage::new()
-        .critical()
-        .digital_signature()
-        .key_encipherment()
-        .build()
-        .unwrap();
+    let key_usage = match intermediate {
+        true => KeyUsage::new()
+            .critical()
+            .key_cert_sign()
+            .crl_sign()
+            .build()
+            .unwrap(),
+        false => KeyUsage::new()
+            .critical()
+            .digital_signature()
+            .key_encipherment()
+            .build()
+            .unwrap(),
+    };
     x509_builder.append_extension(key_usage).unwrap();
 
-    let extended_key_usage = ExtendedKeyUsage::new()
-        .client_auth()
-        .server_auth()
-        .build()
-        .unwrap();
-    x509_builder.append_extension(extended_key_usage).unwrap();
+    if !intermediate {
+        let extended_key_usage = ExtendedKeyUsage::new()
+            .client_auth()
+            .server_auth()
+            .build()
+            .unwrap();
+        x509_builder.append_extension(extended_key_usage).unwrap();
+    }
 
     let subject_key_identifier = SubjectKeyIdentifier::new()
         .build(&x509_builder.x509v3_context(Some(ca_cert), None))

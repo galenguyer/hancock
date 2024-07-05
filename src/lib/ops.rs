@@ -216,7 +216,7 @@ pub fn issue(args: Issue) {
         req
     };
 
-    let cert = cert::generate_cert(args.lifetime, &x509_req, &ca_cert, &ca_pkey);
+    let cert = cert::generate_cert(args.lifetime, &x509_req, false, &ca_cert, &ca_pkey);
     cert::save_cert(
         &path::cert_crt(&base_dir, &args.common_name, key_type),
         &cert,
@@ -308,6 +308,7 @@ pub fn renew(args: Renew) {
                         let cert = cert::generate_cert(
                             original_lifetime as u32,
                             &x509_req,
+                            false,
                             &ca_cert,
                             &ca_pkey,
                         );
