@@ -355,7 +355,7 @@ pub fn renew(args: Renew) {
                         let ca_pkey = match Path::new(&ca_pkey_path).exists() {
                             true => pkey::read_pkey(&ca_pkey_path, args.password.clone()),
                             false => {
-                                panic!("No private key for type {} found", key_type.to_string());
+                                panic!("No private key for type {} found", key_type);
                             }
                         };
 

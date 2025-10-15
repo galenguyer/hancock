@@ -11,11 +11,11 @@ pub enum KeyType {
     Rsa(u32),
 }
 
-impl ToString for KeyType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for KeyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KeyType::Rsa(_) => String::from("rsa"),
-            KeyType::Ecdsa => String::from("ecdsa"),
+            KeyType::Rsa(_) => write!(f, "rsa"),
+            KeyType::Ecdsa => write!(f, "ecdsa"),
         }
     }
 }

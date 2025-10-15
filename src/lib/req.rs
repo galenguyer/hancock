@@ -84,13 +84,10 @@ pub fn generate_req(
             subject_alt_name.dns(cn);
         }
     }
-    match subject_alt_name.build(&x509req_builder.x509v3_context(None)) {
-        Ok(subject_alt_name) => {
-            let mut stack = Stack::new().unwrap();
-            stack.push(subject_alt_name).unwrap();
-            x509req_builder.add_extensions(&stack).unwrap();
-        }
-        Err(_) => {}
+    if let Ok(subject_alt_name) = subject_alt_name.build(&x509req_builder.x509v3_context(None)) {
+        let mut stack = Stack::new().unwrap();
+        stack.push(subject_alt_name).unwrap();
+        x509req_builder.add_extensions(&stack).unwrap();
     }
     let digest_algorithm = match pkey.id() {
         Id::RSA => MessageDigest::sha256(),

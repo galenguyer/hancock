@@ -1,8 +1,8 @@
 [package]
 name = "hancock"
 authors = ["Galen Guyer <galen@galenguyer.com>"]
-version = "1.5.3"
-edition = "2021"
+version = "1.6.0"
+edition = "2024"
 license = "MIT"
 
 [lib]
